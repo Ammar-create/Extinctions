@@ -1,9 +1,9 @@
 {
-  "name": "My Test Plugin",
-  "packageName": "com.ace.myplugin.mytestplugin",
+  "name": "MovieBox",
+  "packageName": "com.ammar.moviebox",
   "version": "1.0.0",
-  "author": "Ace",
-  "description": "Test plugin for SkyStream",
+  "author": "Ammar",
+  "description": "MovieBox scraper for SkyStream",
   "main": "plugin.js",
   "sources": []
 }
