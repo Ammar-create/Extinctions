@@ -1,12 +1,20 @@
 [
   {
-    "name": "MovieBox",
     "packageName": "com.ammar.moviebox",
-    "version": "1.0.0",
-    "author": "Ammar",
+    "name": "MovieBox",
+    "version": 1,
+    "baseUrl": "https://moviebox.cc",
     "description": "MovieBox scraper for SkyStream",
-    "main": "plugin.js",
-    "sources": [],
+    "authors": [
+      "Ammar"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "Movie",
+      "TvSeries"
+    ],
     "url": "https://raw.githubusercontent.com/Ammar-create/Extinctions/main/dist/com.ammar.moviebox.sky"
   }
 ]
