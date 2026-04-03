@@ -4,6 +4,6 @@
   "description": "MovieBox plugin for SkyStream",
   "manifestVersion": 1,
   "pluginLists": [
-    "https://raw.githubusercontent.com/Ammar-create/Extinctions/main/dist/plugin.json"
+    "https://raw.githubusercontent.com/Ammar-create/Extinctions/main/dist/plugins.json"
   ]
 }
