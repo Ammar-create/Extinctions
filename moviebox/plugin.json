@@ -1,0 +1,9 @@
+{
+  "name": "My Test Plugin",
+  "packageName": "com.ace.myplugin.mytestplugin",
+  "version": "1.0.0",
+  "author": "Ace",
+  "description": "Test plugin for SkyStream",
+  "main": "plugin.js",
+  "sources": []
+}
