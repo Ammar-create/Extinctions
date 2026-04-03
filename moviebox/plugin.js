@@ -95,7 +95,7 @@
     function hmacMd5(keyBytes, messageBytes) {
         const blockSize = 64;
         let k = keyBytes.length > blockSize
-            ? strToUtf8Bytes(md5(keyBytes)) // shouldn't happen here but safe
+            ? strToUtf8Bytes(md5(keyBytes))
             : keyBytes.slice();
         while (k.length < blockSize) k.push(0);
         const ipad = k.map(b => b ^ 0x36);
@@ -408,9 +408,6 @@
     }
 
     // ─── Categories / Home Page config ───────────────────────────────────────
-    // Format: { id, name, isPost } 
-    // isPost=true  → POST to subject-api/list
-    // isPost=false → GET  to tab/ranking-list
     const CATEGORIES = [
         { id: "4516404531735022304", name: "Trending",             isPost: false },
         { id: "5692654647815587592", name: "Trending in Cinema",   isPost: false },
@@ -425,7 +422,6 @@
         { id: "8788126208987989488", name: "Chinese Drama",        isPost: false },
         { id: "3910636007619709856", name: "Western TV",           isPost: false },
         { id: "5177200225164885656", name: "Turkish Drama",        isPost: false },
-        // POST-based categories (channel lists)
         { id: "1|1",                                          name: "Movies",                isPost: true },
         { id: "1|2",                                          name: "Series",                isPost: true },
         { id: "1|1006",                                       name: "Anime (All)",           isPost: true },
@@ -492,13 +488,15 @@
                     let items = [];
                     if (!cat.isPost) {
                         // GET ranking list
-                        const url = `${manifest.baseUrl}/wefeed-mobile-bff/tab/ranking-list?tabId=0&categoryType=${cat.id}&page=1&perPage=${perPage}`;
+                        const baseUrl = "https://api.mbox.xyz/"; // FIXED: Use public API endpoint
+                        const url = `${baseUrl}wefeed-mobile-bff/tab/ranking-list?tabId=0&categoryType=${cat.id}&page=1&perPage=${perPage}`;
                         const root = await apiGet(url);
                         const raw = root?.data?.items || root?.data?.subjects || [];
                         items = raw.map(parseItem).filter(Boolean);
                     } else {
                         // POST subject list
-                        const postUrl = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/list`;
+                        const baseUrl = "https://api.mbox.xyz/"; // FIXED: Use public API endpoint
+                        const postUrl = `${baseUrl}wefeed-mobile-bff/subject-api/list`;
                         const mainParts = cat.id.split(';')[0].split('|');
                         const channelId = mainParts[1];
                         const optStr = cat.id.includes(';') ? cat.id.substring(cat.id.indexOf(';') + 1) : '';
@@ -534,7 +532,8 @@
     // ─── search ──────────────────────────────────────────────────────────────
     async function search(query, cb) {
         try {
-            const url = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/search/v2`;
+            const baseUrl = "https://api.mbox.xyz/"; // FIXED: Use public API endpoint
+            const url = `${baseUrl}wefeed-mobile-bff/subject-api/search/v2`;
             const body = JSON.stringify({ page: 1, perPage: 20, keyword: query });
             const root = await apiPost(url, body);
             const results = root?.data?.results || [];
@@ -557,7 +556,8 @@
         try {
             // url is the subjectId
             const id = url;
-            const apiUrl = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/get?subjectId=${id}`;
+            const baseUrl = "https://api.mbox.xyz/"; // FIXED: Use public API endpoint
+            const apiUrl = `${baseUrl}wefeed-mobile-bff/subject-api/get?subjectId=${id}`;
             const root = await apiGet(apiUrl);
             const data = root?.data;
             if (!data) throw new Error("No data");
@@ -618,7 +618,8 @@
 
                 await Promise.all(allIds.map(async (sid) => {
                     try {
-                        const seasonUrl = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/season-info?subjectId=${sid}`;
+                        const baseUrl = "https://api.mbox.xyz/"; // FIXED
+                        const seasonUrl = `${baseUrl}wefeed-mobile-bff/subject-api/season-info?subjectId=${sid}`;
                         const sRoot = await apiGet(seasonUrl);
                         const seasons = sRoot?.data?.seasons || [];
                         for (const season of seasons) {
@@ -699,7 +700,8 @@
             const episode = parts[2] ? parseInt(parts[2]) : 0;
 
             // Step 1: Get subject info to find dubs + auth token
-            const subjectUrl = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/get?subjectId=${originalSubjectId}`;
+            const baseUrl = "https://api.mbox.xyz/"; // FIXED
+            const subjectUrl = `${baseUrl}wefeed-mobile-bff/subject-api/get?subjectId=${originalSubjectId}`;
             const tok1 = generateXClientToken();
             const sig1 = generateXTrSignature("GET", "application/json", "application/json", subjectUrl);
             const { brand, model } = randomBrandModel();
@@ -759,7 +761,7 @@
 
             for (const [subjectId, language] of subjectIds) {
                 try {
-                    const playUrl = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/play-info?subjectId=${subjectId}&se=${season}&ep=${episode}`;
+                    const playUrl = `${baseUrl}wefeed-mobile-bff/subject-api/play-info?subjectId=${subjectId}&se=${season}&ep=${episode}`;
                     const tok2 = generateXClientToken();
                     const sig2 = generateXTrSignature("GET", "application/json", "application/json", playUrl);
                     const langLabel = language.replace(/dub/gi, 'Audio');
@@ -803,7 +805,7 @@
                             const signCookie = stream.signCookie || null;
                             const quality = getHighestQuality(resolutions);
 
-                            const headers = { "Referer": manifest.baseUrl };
+                            const headers = { "Referer": "https://api.mbox.xyz/" }; // FIXED
                             if (signCookie) headers["Cookie"] = signCookie;
 
                             streams.push(new StreamResult({
@@ -839,7 +841,7 @@
 
                             // Endpoint 1: get-stream-captions
                             try {
-                                const subUrl1 = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/get-stream-captions?subjectId=${subjectId}&streamId=${streamId}`;
+                                const subUrl1 = `${baseUrl}wefeed-mobile-bff/subject-api/get-stream-captions?subjectId=${subjectId}&streamId=${streamId}`;
                                 const tok4 = generateXClientToken();
                                 const sig4 = generateXTrSignature("GET", "", "", subUrl1);
                                 const subResp1 = await fetch(subUrl1, {
@@ -862,7 +864,7 @@
 
                             // Endpoint 2: get-ext-captions
                             try {
-                                const subUrl2 = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/get-ext-captions?subjectId=${subjectId}&resourceId=${streamId}&episode=0`;
+                                const subUrl2 = `${baseUrl}wefeed-mobile-bff/subject-api/get-ext-captions?subjectId=${subjectId}&resourceId=${streamId}&episode=0`;
                                 const tok5 = generateXClientToken();
                                 const sig5 = generateXTrSignature("GET", "", "", subUrl2);
                                 const subResp2 = await fetch(subUrl2, {
@@ -885,7 +887,7 @@
                         }
                     } else {
                         // Fallback: resourceDetectors
-                        const fallbackUrl = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/get?subjectId=${subjectId}`;
+                        const fallbackUrl = `${baseUrl}wefeed-mobile-bff/subject-api/get?subjectId=${subjectId}`;
                         const tok3 = generateXClientToken();
                         const sig3 = generateXTrSignature("GET", "application/json", "application/json", fallbackUrl);
                         const fbHeaders = { ...playHeaders, "x-client-token": tok3, "x-tr-signature": sig3 };
@@ -902,7 +904,7 @@
                                     streams.push(new StreamResult({
                                         url: link,
                                         quality: video.resolution ? `${video.resolution}p` : undefined,
-                                        headers: { "Referer": manifest.baseUrl },
+                                        headers: { "Referer": "https://api.mbox.xyz/" }, // FIXED
                                     }));
                                 }
                             }
