@@ -1,0 +1,25 @@
+name: Deploy SkyStream Repository
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate repo.json
+        uses: akashdh11/skystream-repo-action@v1
+        with:
+          repo-path: .
+
+      - name: Commit repo.json
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add repo.json
+          git commit -m "Update repo.json" || echo "No changes"
+          git push
