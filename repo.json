@@ -1,19 +1,9 @@
 {
   "name": "Extinctions",
+  "packageName": "com.ammar.extinctions",
   "description": "MovieBox plugin for SkyStream",
-  "repos": [
-    {
-      "name": "MovieBox",
-      "id": "com.ammar.moviebox",
-      "packageName": "com.ammar.moviebox",
-      "version": "1.0.0",
-      "author": "Ammar",
-      "description": "MovieBox scraper",
-      "url": "https://raw.githubusercontent.com/Ammar-create/Extinctions/main/moviebox/plugin.js",
-      "manifest": "https://raw.githubusercontent.com/Ammar-create/Extinctions/main/moviebox/plugin.json"
-    }
-  ],
+  "manifestVersion": 1,
   "pluginLists": [
-    "https://raw.githubusercontent.com/Ammar-create/Extinctions/main/dist/plugins.json"
+    "https://raw.githubusercontent.com/Ammar-create/Extinctions/main/dist/plugin.json"
   ]
 }
