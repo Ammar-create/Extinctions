@@ -12,5 +12,8 @@
       "url": "https://raw.githubusercontent.com/Ammar-create/Extinctions/main/moviebox/plugin.js",
       "manifest": "https://raw.githubusercontent.com/Ammar-create/Extinctions/main/moviebox/plugin.json"
     }
+  ],
+  "pluginLists": [
+    "https://raw.githubusercontent.com/Ammar-create/Extinctions/main/dist/plugins.json"
   ]
 }
