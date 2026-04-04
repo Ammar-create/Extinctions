@@ -1,20 +1,27 @@
 [
   {
-    "packageName": "com.ammar.moviebox",
+    "packageName": "com.moviebox.provider",
     "name": "MovieBox",
     "version": 1,
-    "baseUrl": "https://moviebox.cc",
-    "description": "MovieBox scraper for SkyStream",
+    "baseUrl": "https://api3.aoneroom.com",
+    "description": "Movies, Series, Anime — Bollywood, Hollywood, Korean, South Indian and more",
     "authors": [
-      "Ammar"
+      "Converted from phisher98"
     ],
     "languages": [
-      "en"
+      "hi",
+      "en",
+      "ta",
+      "te",
+      "ko",
+      "zh",
+      "ja"
     ],
     "categories": [
-      "Movie",
-      "TvSeries"
+      "movies",
+      "tvseries",
+      "anime"
     ],
-    "url": "https://raw.githubusercontent.com/Ammar-create/Extinctions/main/dist/com.ammar.moviebox.sky"
+    "url": "https://raw.githubusercontent.com/Ammar-create/Extinctions/main/dist/com.moviebox.provider.sky"
   }
 ]
