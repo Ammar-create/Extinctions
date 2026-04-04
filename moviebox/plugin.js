@@ -244,31 +244,27 @@
         { id: "1|2",                 name: "Series",               isPost: true  },
     ];
 
-    // ─── getHome ──────────────────────────────────────────────────────────────
+    // ─── getHome — GET only, no POST ────────────────────────────────────────
     async function getHome(cb) {
         try {
             const homeData = {};
-            for (const cat of CATEGORIES) {
+            // Only GET-based ranking categories — no POST to avoid hangs
+            const GET_CATS = [
+                { id: "4516404531735022304", name: "Trending"             },
+                { id: "5692654647815587592", name: "Trending in Cinema"   },
+                { id: "414907768299210008",  name: "Bollywood"            },
+                { id: "3859721901924910512", name: "South Indian"         },
+                { id: "8019599703232971616", name: "Hollywood"            },
+                { id: "4741626294545400336", name: "Top Series This Week" },
+                { id: "8434602210994128512", name: "Anime"                },
+                { id: "7878715743607948784", name: "Korean Drama"         },
+            ];
+            for (const cat of GET_CATS) {
                 try {
-                    let items = [];
-                    if (!cat.isPost) {
-                        const url = `${manifest.baseUrl}/wefeed-mobile-bff/tab/ranking-list?tabId=0&categoryType=${cat.id}&page=1&perPage=15`;
-                        const root = await apiGet(url);
-                        const raw = (root.data && (root.data.items || root.data.subjects)) || [];
-                        items = raw.map(parseItem).filter(Boolean);
-                    } else {
-                        const url = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/list`;
-                        const parts = cat.id.split('|');
-                        const channelId = parts[1];
-                        const body = JSON.stringify({
-                            page: 1, perPage: 15, channelId,
-                            classify: "All", country: "All",
-                            year: "All", genre: "All", sort: "ForYou"
-                        });
-                        const root = await apiPost(url, body);
-                        const raw = (root.data && (root.data.items || root.data.subjects)) || [];
-                        items = raw.map(parseItem).filter(Boolean);
-                    }
+                    const url = manifest.baseUrl + "/wefeed-mobile-bff/tab/ranking-list?tabId=0&categoryType=" + cat.id + "&page=1&perPage=15";
+                    const root = await apiGet(url);
+                    const raw = (root.data && (root.data.items || root.data.subjects)) || [];
+                    const items = raw.map(parseItem).filter(Boolean);
                     if (items.length > 0) homeData[cat.name] = items;
                 } catch (_) {}
             }
@@ -278,16 +274,23 @@
         }
     }
 
-    // ─── search ───────────────────────────────────────────────────────────────
+    // ─── search — GET based ──────────────────────────────────────────────────
     async function search(query, cb) {
         try {
-            const url = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/search/v2`;
-            const body = JSON.stringify({ page: 1, perPage: 20, keyword: query });
-            const root = await apiPost(url, body);
+            const url = manifest.baseUrl + "/wefeed-mobile-bff/subject-api/search?keyword=" + encodeURIComponent(query) + "&page=1&perPage=20";
+            const root = await apiGet(url);
             const results = (root.data && root.data.results) || [];
             const items = [];
             for (const result of results) {
                 for (const subject of (result.subjects || [])) {
+                    const item = parseItem(subject);
+                    if (item) items.push(item);
+                }
+            }
+            // fallback: direct items array
+            if (items.length === 0) {
+                const direct = (root.data && root.data.items) || [];
+                for (const subject of direct) {
                     const item = parseItem(subject);
                     if (item) items.push(item);
                 }
