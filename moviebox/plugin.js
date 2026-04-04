@@ -95,7 +95,7 @@
     function hmacMd5(keyBytes, messageBytes) {
         const blockSize = 64;
         let k = keyBytes.length > blockSize
-            ? strToUtf8Bytes(md5(keyBytes))
+            ? strToUtf8Bytes(md5(keyBytes)) // shouldn't happen here but safe
             : keyBytes.slice();
         while (k.length < blockSize) k.push(0);
         const ipad = k.map(b => b ^ 0x36);
@@ -292,8 +292,8 @@
     async function tmdbSearch(endpoint, extraParams) {
         const url = `${TMDB_API}/${endpoint}?api_key=${TMDB_KEY}${extraParams}&include_adult=false&page=1`;
         try {
-            const resp = await fetch(url);
-            const json = await resp.json();
+            const resp = await http_get(url, {});
+            const json = JSON.parse(resp.body);
             return json.results || [];
         } catch (_) { return []; }
     }
@@ -358,8 +358,8 @@
         try {
             const kind = bestIsTv ? "tv" : "movie";
             const detailUrl = `${TMDB_API}/${kind}/${bestId}?api_key=${TMDB_KEY}&append_to_response=external_ids`;
-            const resp = await fetch(detailUrl);
-            const detail = await resp.json();
+            const resp = await http_get(detailUrl, {});
+            const detail = JSON.parse(resp.body);
             const imdbId = detail.external_ids?.imdb_id || null;
             return { tmdbId: bestId, imdbId, isTv: bestIsTv };
         } catch (_) {
@@ -373,8 +373,8 @@
         try {
             const kind = isTv ? "tv" : "movie";
             const url = `${TMDB_API}/${kind}/${tmdbId}/images?api_key=${TMDB_KEY}`;
-            const resp = await fetch(url);
-            const json = await resp.json();
+            const resp = await http_get(url, {});
+            const json = JSON.parse(resp.body);
             const logos = json.logos || [];
             if (!logos.length) return null;
 
@@ -401,13 +401,16 @@
         try {
             const metaType = isTv ? "series" : "movie";
             const url = `https://v3-cinemeta.strem.io/meta/${metaType}/${imdbId}.json`;
-            const resp = await fetch(url);
-            const json = await resp.json();
+            const resp = await http_get(url, {});
+            const json = JSON.parse(resp.body);
             return json.meta || null;
         } catch (_) { return null; }
     }
 
     // ─── Categories / Home Page config ───────────────────────────────────────
+    // Format: { id, name, isPost } 
+    // isPost=true  → POST to subject-api/list
+    // isPost=false → GET  to tab/ranking-list
     const CATEGORIES = [
         { id: "4516404531735022304", name: "Trending",             isPost: false },
         { id: "5692654647815587592", name: "Trending in Cinema",   isPost: false },
@@ -422,6 +425,7 @@
         { id: "8788126208987989488", name: "Chinese Drama",        isPost: false },
         { id: "3910636007619709856", name: "Western TV",           isPost: false },
         { id: "5177200225164885656", name: "Turkish Drama",        isPost: false },
+        // POST-based categories (channel lists)
         { id: "1|1",                                          name: "Movies",                isPost: true },
         { id: "1|2",                                          name: "Series",                isPost: true },
         { id: "1|1006",                                       name: "Anime (All)",           isPost: true },
@@ -444,18 +448,18 @@
         const tok = generateXClientToken();
         const sig = generateXTrSignature("GET", "application/json", "application/json", url);
         const headers = buildHeaders(tok, sig);
-        const resp = await fetch(url, { headers });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        return resp.json();
+        const resp = await http_get(url, headers);
+        if (!resp.body) throw new Error('Empty response from: ' + url);
+        return JSON.parse(resp.body);
     }
 
     async function apiPost(url, jsonBody) {
         const tok = generateXClientToken();
         const sig = generateXTrSignature("POST", "application/json", "application/json; charset=utf-8", url, jsonBody);
         const headers = buildHeaders(tok, sig, { contentType: "application/json; charset=utf-8" });
-        const resp = await fetch(url, { method: "POST", headers, body: jsonBody });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        return resp.json();
+        const resp = await http_post(url, headers, jsonBody);
+        if (!resp.body) throw new Error('Empty response from: ' + url);
+        return JSON.parse(resp.body);
     }
 
     // ─── Parse item helper ────────────────────────────────────────────────────
@@ -488,15 +492,13 @@
                     let items = [];
                     if (!cat.isPost) {
                         // GET ranking list
-                        const baseUrl = "https://api.mbox.xyz/"; // FIXED: Use public API endpoint
-                        const url = `${baseUrl}wefeed-mobile-bff/tab/ranking-list?tabId=0&categoryType=${cat.id}&page=1&perPage=${perPage}`;
+                        const url = `${manifest.baseUrl}/wefeed-mobile-bff/tab/ranking-list?tabId=0&categoryType=${cat.id}&page=1&perPage=${perPage}`;
                         const root = await apiGet(url);
                         const raw = root?.data?.items || root?.data?.subjects || [];
                         items = raw.map(parseItem).filter(Boolean);
                     } else {
                         // POST subject list
-                        const baseUrl = "https://api.mbox.xyz/"; // FIXED: Use public API endpoint
-                        const postUrl = `${baseUrl}wefeed-mobile-bff/subject-api/list`;
+                        const postUrl = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/list`;
                         const mainParts = cat.id.split(';')[0].split('|');
                         const channelId = mainParts[1];
                         const optStr = cat.id.includes(';') ? cat.id.substring(cat.id.indexOf(';') + 1) : '';
@@ -532,8 +534,7 @@
     // ─── search ──────────────────────────────────────────────────────────────
     async function search(query, cb) {
         try {
-            const baseUrl = "https://api.mbox.xyz/"; // FIXED: Use public API endpoint
-            const url = `${baseUrl}wefeed-mobile-bff/subject-api/search/v2`;
+            const url = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/search/v2`;
             const body = JSON.stringify({ page: 1, perPage: 20, keyword: query });
             const root = await apiPost(url, body);
             const results = root?.data?.results || [];
@@ -556,8 +557,7 @@
         try {
             // url is the subjectId
             const id = url;
-            const baseUrl = "https://api.mbox.xyz/"; // FIXED: Use public API endpoint
-            const apiUrl = `${baseUrl}wefeed-mobile-bff/subject-api/get?subjectId=${id}`;
+            const apiUrl = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/get?subjectId=${id}`;
             const root = await apiGet(apiUrl);
             const data = root?.data;
             if (!data) throw new Error("No data");
@@ -618,8 +618,7 @@
 
                 await Promise.all(allIds.map(async (sid) => {
                     try {
-                        const baseUrl = "https://api.mbox.xyz/"; // FIXED
-                        const seasonUrl = `${baseUrl}wefeed-mobile-bff/subject-api/season-info?subjectId=${sid}`;
+                        const seasonUrl = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/season-info?subjectId=${sid}`;
                         const sRoot = await apiGet(seasonUrl);
                         const seasons = sRoot?.data?.seasons || [];
                         for (const season of seasons) {
@@ -700,8 +699,7 @@
             const episode = parts[2] ? parseInt(parts[2]) : 0;
 
             // Step 1: Get subject info to find dubs + auth token
-            const baseUrl = "https://api.mbox.xyz/"; // FIXED
-            const subjectUrl = `${baseUrl}wefeed-mobile-bff/subject-api/get?subjectId=${originalSubjectId}`;
+            const subjectUrl = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/get?subjectId=${originalSubjectId}`;
             const tok1 = generateXClientToken();
             const sig1 = generateXTrSignature("GET", "application/json", "application/json", subjectUrl);
             const { brand, model } = randomBrandModel();
@@ -734,12 +732,12 @@
                 "x-client-status": "0"
             };
 
-            const subjectResp = await fetch(subjectUrl, { headers: subjectHeaders });
-            const subjectData = await subjectResp.json();
+            const subjectResp = await http_get(subjectUrl, subjectHeaders);
+            const subjectData = JSON.parse(subjectResp.body || '{}');
 
             // Extract token from x-user response header (if available)
             let token = null;
-            const xUser = subjectResp.headers.get('x-user');
+            const xUser = subjectResp.headers && (subjectResp.headers['x-user'] || subjectResp.headers['X-User']);
             if (xUser) {
                 try { token = JSON.parse(xUser)?.token || null; } catch (_) {}
             }
@@ -761,7 +759,7 @@
 
             for (const [subjectId, language] of subjectIds) {
                 try {
-                    const playUrl = `${baseUrl}wefeed-mobile-bff/subject-api/play-info?subjectId=${subjectId}&se=${season}&ep=${episode}`;
+                    const playUrl = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/play-info?subjectId=${subjectId}&se=${season}&ep=${episode}`;
                     const tok2 = generateXClientToken();
                     const sig2 = generateXTrSignature("GET", "application/json", "application/json", playUrl);
                     const langLabel = language.replace(/dub/gi, 'Audio');
@@ -791,9 +789,9 @@
                         "x-client-status": "0"
                     };
 
-                    const playResp = await fetch(playUrl, { headers: playHeaders });
-                    if (!playResp.ok) continue;
-                    const playRoot = await playResp.json();
+                    const playResp = await http_get(playUrl, playHeaders );
+                    if (!playResp.body) continue;
+                    const playRoot = JSON.parse(playResp.body);
                     const playStreams = playRoot?.data?.streams || [];
 
                     if (playStreams.length > 0) {
@@ -805,7 +803,7 @@
                             const signCookie = stream.signCookie || null;
                             const quality = getHighestQuality(resolutions);
 
-                            const headers = { "Referer": "https://api.mbox.xyz/" }; // FIXED
+                            const headers = { "Referer": manifest.baseUrl };
                             if (signCookie) headers["Cookie"] = signCookie;
 
                             streams.push(new StreamResult({
@@ -841,14 +839,13 @@
 
                             // Endpoint 1: get-stream-captions
                             try {
-                                const subUrl1 = `${baseUrl}wefeed-mobile-bff/subject-api/get-stream-captions?subjectId=${subjectId}&streamId=${streamId}`;
+                                const subUrl1 = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/get-stream-captions?subjectId=${subjectId}&streamId=${streamId}`;
                                 const tok4 = generateXClientToken();
                                 const sig4 = generateXTrSignature("GET", "", "", subUrl1);
-                                const subResp1 = await fetch(subUrl1, {
-                                    headers: { ...baseSubHdr, "X-Client-Token": tok4, "x-tr-signature": sig4 }
-                                });
-                                if (subResp1.ok) {
-                                    const subRoot1 = await subResp1.json();
+                                const subHdr1 = { ...baseSubHdr, "X-Client-Token": tok4, "x-tr-signature": sig4 };
+                                const subResp1 = await http_get(subUrl1, subHdr1);
+                                if (subResp1.body) {
+                                    const subRoot1 = JSON.parse(subResp1.body);
                                     for (const cap of (subRoot1?.data?.extCaptions || [])) {
                                         if (!cap.url) continue;
                                         const lang = cap.language || cap.lanName || cap.lan || "Unknown";
@@ -864,14 +861,13 @@
 
                             // Endpoint 2: get-ext-captions
                             try {
-                                const subUrl2 = `${baseUrl}wefeed-mobile-bff/subject-api/get-ext-captions?subjectId=${subjectId}&resourceId=${streamId}&episode=0`;
+                                const subUrl2 = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/get-ext-captions?subjectId=${subjectId}&resourceId=${streamId}&episode=0`;
                                 const tok5 = generateXClientToken();
                                 const sig5 = generateXTrSignature("GET", "", "", subUrl2);
-                                const subResp2 = await fetch(subUrl2, {
-                                    headers: { ...baseSubHdr, "X-Client-Token": tok5, "x-tr-signature": sig5 }
-                                });
-                                if (subResp2.ok) {
-                                    const subRoot2 = await subResp2.json();
+                                const subHdr2 = { ...baseSubHdr, "X-Client-Token": tok5, "x-tr-signature": sig5 };
+                                const subResp2 = await http_get(subUrl2, subHdr2);
+                                if (subResp2.body) {
+                                    const subRoot2 = JSON.parse(subResp2.body);
                                     for (const cap of (subRoot2?.data?.extCaptions || [])) {
                                         if (!cap.url) continue;
                                         const lang = cap.lan || cap.lanName || cap.language || "Unknown";
@@ -887,15 +883,15 @@
                         }
                     } else {
                         // Fallback: resourceDetectors
-                        const fallbackUrl = `${baseUrl}wefeed-mobile-bff/subject-api/get?subjectId=${subjectId}`;
+                        const fallbackUrl = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/get?subjectId=${subjectId}`;
                         const tok3 = generateXClientToken();
                         const sig3 = generateXTrSignature("GET", "application/json", "application/json", fallbackUrl);
                         const fbHeaders = { ...playHeaders, "x-client-token": tok3, "x-tr-signature": sig3 };
                         delete fbHeaders["Authorization"];
 
-                        const fbResp = await fetch(fallbackUrl, { headers: fbHeaders });
-                        if (fbResp.ok) {
-                            const fbRoot = await fbResp.json();
+                        const fbResp = await http_get(fallbackUrl, fbHeaders );
+                        if (fbResp.body) {
+                            const fbRoot = JSON.parse(fbResp.body);
                             const detectors = fbRoot?.data?.resourceDetectors || [];
                             for (const det of detectors) {
                                 for (const video of (det.resolutionList || [])) {
@@ -904,7 +900,7 @@
                                     streams.push(new StreamResult({
                                         url: link,
                                         quality: video.resolution ? `${video.resolution}p` : undefined,
-                                        headers: { "Referer": "https://api.mbox.xyz/" }, // FIXED
+                                        headers: { "Referer": manifest.baseUrl },
                                     }));
                                 }
                             }
