@@ -444,11 +444,24 @@
     ];
 
     // ─── Request helper ──────────────────────────────────────────────────────
+    // Route all API calls through MAGIC_PROXY_v2 so SkyStream's native
+    // OkHttp client handles the TLS handshake (same as CloudStream does)
+    function proxyRequest(url, headers, body) {
+        return "MAGIC_PROXY_v2" + btoa(JSON.stringify({
+            url: url,
+            method: body ? "POST" : "GET",
+            headers: headers,
+            body: body || null,
+            options: { parseJson: true }
+        }));
+    }
+
     async function apiGet(url) {
         const tok = generateXClientToken();
         const sig = generateXTrSignature("GET", "application/json", "application/json", url);
         const headers = buildHeaders(tok, sig);
-        const resp = await http_get(url, headers);
+        const proxied = proxyRequest(url, headers, null);
+        const resp = await http_get(proxied, {});
         if (!resp.body) throw new Error('Empty response from: ' + url);
         return JSON.parse(resp.body);
     }
@@ -457,7 +470,8 @@
         const tok = generateXClientToken();
         const sig = generateXTrSignature("POST", "application/json", "application/json; charset=utf-8", url, jsonBody);
         const headers = buildHeaders(tok, sig, { contentType: "application/json" });
-        const resp = await http_post(url, headers, jsonBody);
+        const proxied = proxyRequest(url, headers, jsonBody);
+        const resp = await http_get(proxied, {});
         if (!resp.body) throw new Error('Empty response from: ' + url);
         return JSON.parse(resp.body);
     }
@@ -726,7 +740,7 @@
                 "x-client-status": "0"
             };
 
-            const subjectResp = await http_get(subjectUrl, subjectHeaders);
+            const subjectResp = await http_get("MAGIC_PROXY_v2" + btoa(JSON.stringify({ url: subjectUrl, method: "GET", headers: subjectHeaders })), {});
             const subjectData = JSON.parse(subjectResp.body || '{}');
 
             // Extract token from x-user response header (if available)
@@ -783,7 +797,7 @@
                         "x-client-status": "0"
                     };
 
-                    const playResp = await http_get(playUrl, playHeaders );
+                    const playResp = await http_get("MAGIC_PROXY_v2" + btoa(JSON.stringify({ url: playUrl, method: "GET", headers: playHeaders })), {});
                     if (!playResp.body) continue;
                     const playRoot = JSON.parse(playResp.body);
                     const playStreams = playRoot?.data?.streams || [];
@@ -837,7 +851,7 @@
                                 const tok4 = generateXClientToken();
                                 const sig4 = generateXTrSignature("GET", "", "", subUrl1);
                                 const subHdr1 = { ...baseSubHdr, "X-Client-Token": tok4, "x-tr-signature": sig4 };
-                                const subResp1 = await http_get(subUrl1, subHdr1);
+                                const subResp1 = await http_get("MAGIC_PROXY_v2" + btoa(JSON.stringify({ url: subUrl1, method: "GET", headers: subHdr1 })), {});
                                 if (subResp1.body) {
                                     const subRoot1 = JSON.parse(subResp1.body);
                                     for (const cap of (subRoot1?.data?.extCaptions || [])) {
@@ -859,7 +873,7 @@
                                 const tok5 = generateXClientToken();
                                 const sig5 = generateXTrSignature("GET", "", "", subUrl2);
                                 const subHdr2 = { ...baseSubHdr, "X-Client-Token": tok5, "x-tr-signature": sig5 };
-                                const subResp2 = await http_get(subUrl2, subHdr2);
+                                const subResp2 = await http_get("MAGIC_PROXY_v2" + btoa(JSON.stringify({ url: subUrl2, method: "GET", headers: subHdr2 })), {});
                                 if (subResp2.body) {
                                     const subRoot2 = JSON.parse(subResp2.body);
                                     for (const cap of (subRoot2?.data?.extCaptions || [])) {
@@ -883,7 +897,7 @@
                         const fbHeaders = { ...playHeaders, "x-client-token": tok3, "x-tr-signature": sig3 };
                         delete fbHeaders["Authorization"];
 
-                        const fbResp = await http_get(fallbackUrl, fbHeaders );
+                        const fbResp = await http_get("MAGIC_PROXY_v2" + btoa(JSON.stringify({ url: fallbackUrl, method: "GET", headers: fbHeaders })), {});
                         if (fbResp.body) {
                             const fbRoot = JSON.parse(fbResp.body);
                             const detectors = fbRoot?.data?.resourceDetectors || [];
