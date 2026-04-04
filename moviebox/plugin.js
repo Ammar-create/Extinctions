@@ -456,7 +456,7 @@
     async function apiPost(url, jsonBody) {
         const tok = generateXClientToken();
         const sig = generateXTrSignature("POST", "application/json", "application/json; charset=utf-8", url, jsonBody);
-        const headers = buildHeaders(tok, sig, { contentType: "application/json; charset=utf-8" });
+        const headers = buildHeaders(tok, sig, { contentType: "application/json" });
         const resp = await http_post(url, headers, jsonBody);
         if (!resp.body) throw new Error('Empty response from: ' + url);
         return JSON.parse(resp.body);
@@ -484,20 +484,16 @@
             const perPage = 15;
             const homeData = {};
 
-            // We load only the first few categories to avoid too many parallel requests
-            const toLoad = CATEGORIES.slice(0, 6);
-
-            await Promise.all(toLoad.map(async (cat) => {
+            // Load categories one by one — parallel causes timeouts on mobile
+            for (const cat of CATEGORIES.slice(0, 8)) {
                 try {
                     let items = [];
                     if (!cat.isPost) {
-                        // GET ranking list
                         const url = `${manifest.baseUrl}/wefeed-mobile-bff/tab/ranking-list?tabId=0&categoryType=${cat.id}&page=1&perPage=${perPage}`;
                         const root = await apiGet(url);
                         const raw = root?.data?.items || root?.data?.subjects || [];
                         items = raw.map(parseItem).filter(Boolean);
                     } else {
-                        // POST subject list
                         const postUrl = `${manifest.baseUrl}/wefeed-mobile-bff/subject-api/list`;
                         const mainParts = cat.id.split(';')[0].split('|');
                         const channelId = mainParts[1];
@@ -508,9 +504,7 @@
                             if (k && v) opts[k.trim()] = v.trim();
                         });
                         const body = JSON.stringify({
-                            page: 1,
-                            perPage,
-                            channelId,
+                            page: 1, perPage, channelId,
                             classify: opts.classify || "All",
                             country:  opts.country  || "All",
                             year:     opts.year     || "All",
@@ -522,8 +516,8 @@
                         items = raw.map(parseItem).filter(Boolean);
                     }
                     if (items.length > 0) homeData[cat.name] = items;
-                } catch (_) { /* skip failed category */ }
-            }));
+                } catch (_) { /* skip failed category and continue */ }
+            }
 
             cb({ success: true, data: homeData });
         } catch (e) {
