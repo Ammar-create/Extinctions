@@ -1,103 +1,23 @@
 (function () {
     // --- Configuration & Constants ---
     const baseUrl = (typeof manifest !== 'undefined' && manifest.baseUrl) ? manifest.baseUrl : "https://api3.aoneroom.com";
-    const secretKeyDefault = "76iRl07s0xSN9jqmEWAt79EBJZulIQIsV64FZr2O"; // Decoded from Base64
-    const secretKeyAlt = "Xqn2nnO41/L92o1iuXhSLHTbXvY4Z5ZZ62m8mSLA"; // Decoded from Base64
+    const secretKeyDefault = "76iRl07s0xSN9jqmEWAt79EBJZulIQIsV64FZr2O"; 
+    const secretKeyAlt = "Xqn2nnO41/L92o1iuXhSLHTbXvY4Z5ZZ62m8mSLA"; 
+    const deviceId = "d7578036d13336cc1b2212c1dadf43c3"; // Fixed dummy device ID
 
-    const brandModels = {
-        "Samsung":["SM-S918B", "SM-A528B", "SM-M336B"],
-        "Xiaomi":["2201117TI", "M2012K11AI", "Redmi Note 11"],
-        "OnePlus":["LE2111", "CPH2449", "IN2023"],
-        "Google": ["Pixel 6", "Pixel 7", "Pixel 8"],
-        "Realme":["RMX3085", "RMX3360", "RMX3551"]
-    };
-
-    // --- Crypto Utils (Minified MD5 & HMAC-MD5) ---
-    const md5 = (function () {
-        function safe_add(x, y) { var l = (x & 0xFFFF) + (y & 0xFFFF), m = (x >> 16) + (y >> 16) + (l >> 16); return (m << 16) | (l & 0xFFFF); }
-        function bit_rol(num, cnt) { return (num << cnt) | (num >>> (32 - cnt)); }
-        function md5_cmn(q, a, b, x, s, t) { return safe_add(bit_rol(safe_add(safe_add(a, q), safe_add(x, t)), s), b); }
-        function md5_ff(a, b, c, d, x, s, t) { return md5_cmn((b & c) | ((~b) & d), a, b, x, s, t); }
-        function md5_gg(a, b, c, d, x, s, t) { return md5_cmn((b & d) | (c & (~d)), a, b, x, s, t); }
-        function md5_hh(a, b, c, d, x, s, t) { return md5_cmn(b ^ c ^ d, a, b, x, s, t); }
-        function md5_ii(a, b, c, d, x, s, t) { return md5_cmn(c ^ (b | (~d)), a, b, x, s, t); }
-        function core_md5(x, len) {
-            x[len >> 5] |= 0x80 << ((len) % 32); x[(((len + 64) >>> 9) << 4) + 14] = len;
-            var a = 1732584193, b = -271733879, c = -1732584194, d = 271733878;
-            for (var i = 0; i < x.length; i += 16) {
-                var olda = a, oldb = b, oldc = c, oldd = d;
-                a = md5_ff(a, b, c, d, x[i + 0], 7, -680876936); d = md5_ff(d, a, b, c, x[i + 1], 12, -389564586); c = md5_ff(c, d, a, b, x[i + 2], 17, 606105819); b = md5_ff(b, c, d, a, x[i + 3], 22, -1044525330);
-                a = md5_ff(a, b, c, d, x[i + 4], 7, -176418897); d = md5_ff(d, a, b, c, x[i + 5], 12, 1200080426); c = md5_ff(c, d, a, b, x[i + 6], 17, -1473231341); b = md5_ff(b, c, d, a, x[i + 7], 22, -45705983);
-                a = md5_ff(a, b, c, d, x[i + 8], 7, 1770035416); d = md5_ff(d, a, b, c, x[i + 9], 12, -1958414417); c = md5_ff(c, d, a, b, x[i + 10], 17, -42063); b = md5_ff(b, c, d, a, x[i + 11], 22, -1990404162);
-                a = md5_ff(a, b, c, d, x[i + 12], 7, 1804603682); d = md5_ff(d, a, b, c, x[i + 13], 12, -40341101); c = md5_ff(c, d, a, b, x[i + 14], 17, -1502002290); b = md5_ff(b, c, d, a, x[i + 15], 22, 1236535329);
-                a = md5_gg(a, b, c, d, x[i + 1], 5, -165796510); d = md5_gg(d, a, b, c, x[i + 6], 9, -1069501632); c = md5_gg(c, d, a, b, x[i + 11], 14, 643717713); b = md5_gg(b, c, d, a, x[i + 0], 20, -373897302);
-                a = md5_gg(a, b, c, d, x[i + 5], 5, -701558691); d = md5_gg(d, a, b, c, x[i + 10], 9, 38016083); c = md5_gg(c, d, a, b, x[i + 15], 14, -660478335); b = md5_gg(b, c, d, a, x[i + 4], 20, -405537848);
-                a = md5_gg(a, b, c, d, x[i + 9], 5, 568446438); d = md5_gg(d, a, b, c, x[i + 14], 9, -1019803690); c = md5_gg(c, d, a, b, x[i + 3], 14, -187363961); b = md5_gg(b, c, d, a, x[i + 8], 20, 1163531501);
-                a = md5_gg(a, b, c, d, x[i + 13], 5, -1444681467); d = md5_gg(d, a, b, c, x[i + 2], 9, -51403784); c = md5_gg(c, d, a, b, x[i + 7], 14, 1735328473); b = md5_gg(b, c, d, a, x[i + 12], 20, -1926607734);
-                a = md5_hh(a, b, c, d, x[i + 5], 4, -378558); d = md5_hh(d, a, b, c, x[i + 8], 11, -2022574463); c = md5_hh(c, d, a, b, x[i + 11], 16, 1839030562); b = md5_hh(b, c, d, a, x[i + 14], 23, -35309556);
-                a = md5_hh(a, b, c, d, x[i + 1], 4, -1530992060); d = md5_hh(d, a, b, c, x[i + 4], 11, 1272893353); c = md5_hh(c, d, a, b, x[i + 7], 16, -155497632); b = md5_hh(b, c, d, a, x[i + 10], 23, -1094730640);
-                a = md5_hh(a, b, c, d, x[i + 13], 4, 681279174); d = md5_hh(d, a, b, c, x[i + 0], 11, -358537222); c = md5_hh(c, d, a, b, x[i + 3], 16, -722521979); b = md5_hh(b, c, d, a, x[i + 6], 23, 76029189);
-                a = md5_hh(a, b, c, d, x[i + 9], 4, -640364487); d = md5_hh(d, a, b, c, x[i + 12], 11, -421815835); c = md5_hh(c, d, a, b, x[i + 15], 16, 530742520); b = md5_hh(b, c, d, a, x[i + 2], 23, -995338651);
-                a = md5_ii(a, b, c, d, x[i + 0], 6, -198630844); d = md5_ii(d, a, b, c, x[i + 7], 10, 1126891415); c = md5_ii(c, d, a, b, x[i + 14], 15, -1416354905); b = md5_ii(b, c, d, a, x[i + 5], 21, -57434055);
-                a = md5_ii(a, b, c, d, x[i + 12], 6, 1700485571); d = md5_ii(d, a, b, c, x[i + 3], 10, -1894986606); c = md5_ii(c, d, a, b, x[i + 10], 15, -1051523); b = md5_ii(b, c, d, a, x[i + 1], 21, -2054922799);
-                a = md5_ii(a, b, c, d, x[i + 8], 6, 1873313359); d = md5_ii(d, a, b, c, x[i + 15], 10, -30611744); c = md5_ii(c, d, a, b, x[i + 6], 15, -1560198380); b = md5_ii(b, c, d, a, x[i + 13], 21, 1309151649);
-                a = md5_ii(a, b, c, d, x[i + 4], 6, -145523070); d = md5_ii(d, a, b, c, x[i + 11], 10, -1120210379); c = md5_ii(c, d, a, b, x[i + 2], 15, 718787259); b = md5_ii(b, c, d, a, x[i + 9], 21, -343485551);
-                a = safe_add(a, olda); b = safe_add(b, oldb); c = safe_add(c, oldc); d = safe_add(d, oldd);
-            }
-            return[a, b, c, d];
-        }
-        function str2binl(str) {
-            var bin =[], mask = (1 << 8) - 1;
-            for (var i = 0; i < str.length * 8; i += 8) bin[i >> 5] |= (str.charCodeAt(i / 8) & mask) << (i % 32);
-            return bin;
-        }
-        function binl2hex(binarray) {
-            var hex_tab = "0123456789abcdef", str = "";
-            for (var i = 0; i < binarray.length * 4; i++) {
-                str += hex_tab.charAt((binarray[i >> 2] >> ((i % 4) * 8 + 4)) & 0xF) + hex_tab.charAt((binarray[i >> 2] >> ((i % 4) * 8)) & 0xF);
-            }
-            return str;
-        }
-        function binl2b64(binarray) {
-            var tab = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/", str = "";
-            for (var i = 0; i < binarray.length * 4; i += 3) {
-                var triplet = (((binarray[i >> 2] >> 8 * (i % 4)) & 0xFF) << 16) | (((binarray[i + 1 >> 2] >> 8 * ((i + 1) % 4)) & 0xFF) << 8) | ((binarray[i + 2 >> 2] >> 8 * ((i + 2) % 4)) & 0xFF);
-                for (var j = 0; j < 4; j++) {
-                    if (i * 8 + j * 6 > binarray.length * 32) str += "=";
-                    else str += tab.charAt((triplet >> 6 * (3 - j)) & 0x3F);
-                }
-            }
-            return str;
-        }
-        return {
-            hashHex: function (s) { return binl2hex(core_md5(str2binl(s), s.length * 8)); },
-            hmacB64: function (key, data) {
-                var bkey = str2binl(key);
-                if (bkey.length > 16) bkey = core_md5(bkey, key.length * 8);
-                var ipad = Array(16), opad = Array(16);
-                for (var i = 0; i < 16; i++) { ipad[i] = bkey[i] ^ 0x36363636; opad[i] = bkey[i] ^ 0x5C5C5C5C; }
-                var hash = core_md5(ipad.concat(str2binl(data)), 512 + data.length * 8);
-                return binl2b64(core_md5(opad.concat(hash), 512 + 128));
-            }
-        };
-    })();
-
-    // --- Core Helper Functions ---
-    function generateDeviceId() {
-        let result = '';
-        const hex = '0123456789abcdef';
-        for (let i = 0; i < 32; i++) { result += hex.charAt(Math.floor(Math.random() * 16)); }
-        return result;
-    }
-    const deviceId = generateDeviceId();
-
-    function randomBrandModel() {
-        const brands = Object.keys(brandModels);
-        const brand = brands[Math.floor(Math.random() * brands.length)];
-        const models = brandModels[brand];
-        const model = models[Math.floor(Math.random() * models.length)];
-        return { brand, model };
-    }
+    // --- Minified MD5 & HMAC Utils ---
+    const md5={hashHex:function(s){return binl2hex(core_md5(str2binl(s),s.length*8))},hmacB64:function(k,d){var b=str2binl(k);if(b.length>16)b=core_md5(b,k.length*8);var i=Array(16),o=Array(16);for(var j=0;j<16;j++){i[j]=b[j]^0x36363636;o[j]=b[j]^0x5C5C5C5C}var h=core_md5(i.concat(str2binl(d)),512+d.length*8);return binl2b64(core_md5(o.concat(h),512+128))}};
+    function safe_add(x,y){var l=(x&0xFFFF)+(y&0xFFFF),m=(x>>16)+(y>>16)+(l>>16);return(m<<16)|(l&0xFFFF)}
+    function bit_rol(n,c){return(n<<c)|(n>>>(32-c))}
+    function md5_cmn(q,a,b,x,s,t){return safe_add(bit_rol(safe_add(safe_add(a,q),safe_add(x,t)),s),b)}
+    function md5_ff(a,b,c,d,x,s,t){return md5_cmn((b&c)|((~b)&d),a,b,x,s,t)}
+    function md5_gg(a,b,c,d,x,s,t){return md5_cmn((b&d)|(c&(~d)),a,b,x,s,t)}
+    function md5_hh(a,b,c,d,x,s,t){return md5_cmn(b^c^d,a,b,x,s,t)}
+    function md5_ii(a,b,c,d,x,s,t){return md5_cmn(c^(b|(~d)),a,b,x,s,t)}
+    function core_md5(x,l){x[l>>5]|=0x80<<((l)%32);x[(((l+64)>>>9)<<4)+14]=l;var a=1732584193,b=-271733879,c=-1732584194,d=271733878;for(var i=0;i<x.length;i+=16){var oa=a,ob=b,oc=c,od=d;a=md5_ff(a,b,c,d,x[i+0],7,-680876936);d=md5_ff(d,a,b,c,x[i+1],12,-389564586);c=md5_ff(c,d,a,b,x[i+2],17,606105819);b=md5_ff(b,c,d,a,x[i+3],22,-1044525330);a=md5_ff(a,b,c,d,x[i+4],7,-176418897);d=md5_ff(d,a,b,c,x[i+5],12,1200080426);c=md5_ff(c,d,a,b,x[i+6],17,-1473231341);b=md5_ff(b,c,d,a,x[i+7],22,-45705983);a=md5_ff(a,b,c,d,x[i+8],7,1770035416);d=md5_ff(d,a,b,c,x[i+9],12,-1958414417);c=md5_ff(c,d,a,b,x[i+10],17,-42063);b=md5_ff(b,c,d,a,x[i+11],22,-1990404162);a=md5_ff(a,b,c,d,x[i+12],7,1804603682);d=md5_ff(d,a,b,c,x[i+13],12,-40341101);c=md5_ff(c,d,a,b,x[i+14],17,-1502002290);b=md5_ff(b,c,d,a,x[i+15],22,1236535329);a=md5_gg(a,b,c,d,x[i+1],5,-165796510);d=md5_gg(d,a,b,c,x[i+6],9,-1069501632);c=md5_gg(c,d,a,b,x[i+11],14,643717713);b=md5_gg(b,c,d,a,x[i+0],20,-373897302);a=md5_gg(a,b,c,d,x[i+5],5,-701558691);d=md5_gg(d,a,b,c,x[i+10],9,38016083);c=md5_gg(c,d,a,b,x[i+15],14,-660478335);b=md5_gg(b,c,d,a,x[i+4],20,-405537848);a=md5_gg(a,b,c,d,x[i+9],5,568446438);d=md5_gg(d,a,b,c,x[i+14],9,-1019803690);c=md5_gg(c,d,a,b,x[i+3],14,-187363961);b=md5_gg(b,c,d,a,x[i+8],20,1163531501);a=md5_gg(a,b,c,d,x[i+13],5,-1444681467);d=md5_gg(d,a,b,c,x[i+2],9,-51403784);c=md5_gg(c,d,a,b,x[i+7],14,1735328473);b=md5_gg(b,c,d,a,x[i+12],20,-1926607734);a=md5_hh(a,b,c,d,x[i+5],4,-378558);d=md5_hh(d,a,b,c,x[i+8],11,-2022574463);c=md5_hh(c,d,a,b,x[i+11],16,1839030562);b=md5_hh(b,c,d,a,x[i+14],23,-35309556);a=md5_hh(a,b,c,d,x[i+1],4,-1530992060);d=md5_hh(d,a,b,c,x[i+4],11,1272893353);c=md5_hh(c,d,a,b,x[i+7],16,-155497632);b=md5_hh(b,c,d,a,x[i+10],23,-1094730640);a=md5_hh(a,b,c,d,x[i+13],4,681279174);d=md5_hh(d,a,b,c,x[i+0],11,-358537222);c=md5_hh(c,d,a,b,x[i+3],16,-722521979);b=md5_hh(b,c,d,a,x[i+6],23,76029189);a=md5_hh(a,b,c,d,x[i+9],4,-640364487);d=md5_hh(d,a,b,c,x[i+12],11,-421815835);c=md5_hh(c,d,a,b,x[i+15],16,530742520);b=md5_hh(b,c,d,a,x[i+2],23,-995338651);a=md5_ii(a,b,c,d,x[i+0],6,-198630844);d=md5_ii(d,a,b,c,x[i+7],10,1126891415);c=md5_ii(c,d,a,b,x[i+14],15,-1416354905);b=md5_ii(b,c,d,a,x[i+5],21,-57434055);a=md5_ii(a,b,c,d,x[i+12],6,1700485571);d=md5_ii(d,a,b,c,x[i+3],10,-1894986606);c=md5_ii(c,d,a,b,x[i+10],15,-1051523);b=md5_ii(b,c,d,a,x[i+1],21,-2054922799);a=md5_ii(a,b,c,d,x[i+8],6,1873313359);d=md5_ii(d,a,b,c,x[i+15],10,-30611744);c=md5_ii(c,d,a,b,x[i+6],15,-1560198380);b=md5_ii(b,c,d,a,x[i+13],21,1309151649);a=md5_ii(a,b,c,d,x[i+4],6,-145523070);d=md5_ii(d,a,b,c,x[i+11],10,-1120210379);c=md5_ii(c,d,a,b,x[i+2],15,718787259);b=md5_ii(b,c,d,a,x[i+9],21,-343485551);a=safe_add(a,oa);b=safe_add(b,ob);c=safe_add(c,oc);d=safe_add(d,od)}return[a,b,c,d]}
+    function str2binl(s){var b=[],m=(1<<8)-1;for(var i=0;i<s.length*8;i+=8)b[i>>5]|=(s.charCodeAt(i/8)&m)<<(i%32);return b}
+    function binl2hex(a){var h="0123456789abcdef",s="";for(var i=0;i<a.length*4;i++){s+=h.charAt((a[i>>2]>>((i%4)*8+4))&0xF)+h.charAt((a[i>>2]>>((i%4)*8))&0xF)}return s}
+    function binl2b64(a){var t="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",s="";for(var i=0;i<a.length*4;i+=3){var r=(((a[i>>2]>>8*(i%4))&0xFF)<<16)|(((a[i+1>>2]>>8*((i+1)%4))&0xFF)<<8)|((a[i+2>>2]>>8*((i+2)%4))&0xFF);for(var j=0;j<4;j++){if(i*8+j*6>a.length*32)s+="=";else s+=t.charAt((r>>6*(3-j))&0x3F)}}return s}
 
     function toBinaryString(str) { return unescape(encodeURIComponent(str)); }
 
@@ -130,7 +50,7 @@
             let sortedKeys = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
             let qParts =[];
             for (const k of sortedKeys) {
-                for (const v of grouped[k]) qParts.push(`${k}=${v}`); // Do NOT URI encode per python API requirements
+                for (const v of grouped[k]) qParts.push(`${k}=${v}`); 
             }
             query = qParts.join("&");
         }
@@ -164,9 +84,8 @@
 
     function generateHeaders(method, url, jsonBody) {
         const timestamp = Date.now();
-        const bModel = randomBrandModel();
         return {
-            "user-agent": `com.community.mbox.in/50020042 (Linux; U; Android 16; en_IN; ${bModel.model}; Build/BP22.250325.006; Cronet/133.0.6876.3)`,
+            "user-agent": "com.community.mbox.in/50020042 (Linux; U; Android 16; en_IN; Pixel 7; Build/BP22.250325.006; Cronet/133.0.6876.3)",
             "accept": "application/json",
             "content-type": "application/json",
             "connection": "keep-alive",
@@ -174,7 +93,7 @@
             "x-tr-signature": generateXTrSignature(method, "application/json", method === "POST" ? "application/json; charset=utf-8" : "application/json", url, jsonBody, false, timestamp),
             "x-client-info": JSON.stringify({
                 "package_name": "com.community.mbox.in", "version_name": "3.0.03.0529.03", "version_code": 50020042, "os": "android", "os_version": "16",
-                "device_id": deviceId, "install_store": "ps", "gaid": "d7578036d13336cc", "brand": bModel.brand, "model": bModel.model,
+                "device_id": deviceId, "install_store": "ps", "gaid": "d7578036d13336cc", "brand": "Google", "model": "Pixel 7",
                 "system_language": "en", "net": "NETWORK_WIFI", "region": "IN", "timezone": "Asia/Calcutta", "sp_code": ""
             }),
             "x-client-status": "0",
@@ -182,7 +101,7 @@
         };
     }
 
-    // --- Main Plugin Functions ---
+    // --- Main Core Functions ---
 
     async function fetchCategoryItems(dataId, page) {
         const perPage = 15;
@@ -233,7 +152,6 @@
     async function getHome(cb) {
         const categories =[
             { id: "4516404531735022304", name: "Trending" },
-            { id: "5692654647815587592", name: "Trending in Cinema" },
             { id: "414907768299210008", name: "Bollywood" },
             { id: "1|1", name: "Movies" },
             { id: "1|2", name: "Series" },
@@ -241,10 +159,12 @@
         ];
 
         try {
-            let homeData = {};
+            let homeData =[];
             for (const cat of categories) {
                 let items = await fetchCategoryItems(cat.id, 1);
-                if (items && items.length > 0) homeData[cat.name] = items;
+                if (items && items.length > 0) {
+                    homeData.push({ title: cat.name, items: items });
+                }
             }
             cb({ success: true, data: homeData });
         } catch (e) {
@@ -259,7 +179,7 @@
 
             const res = await fetch(url, { method: "POST", headers: generateHeaders("POST", url, jsonBody), body: jsonBody });
             const root = await res.json();
-            const results = root?.data?.results || [];
+            const results = root?.data?.results ||[];
             let searchList =[];
 
             for (const result of results) {
@@ -296,23 +216,10 @@
             if (!data) throw new Error("No data");
 
             const title = (data.title || "").split("[")[0];
-            const durationStr = data.duration || "";
-            let durationMinutes = 0;
-            const durMatch = durationStr.match(/(\d+)h\s*(\d+)m/);
-            if (durMatch) durationMinutes = parseInt(durMatch[1]) * 60 + parseInt(durMatch[2]);
-            else durationMinutes = parseInt(durationStr.replace("m", "")) || 0;
+            let durationMinutes = parseInt((data.duration || "0").replace(/\D/g, "")) || 0;
 
             const coverUrl = data.cover?.url;
             const type = (data.subjectType === 2 || data.subjectType === 7) ? "series" : "movie";
-
-            const actors =[];
-            if (data.staffList) {
-                for (const staff of data.staffList) {
-                    if (staff.staffType === 1 && staff.name) {
-                        actors.push(new Actor({ name: staff.name, role: staff.character || "Actor", image: staff.avatarUrl || "" }));
-                    }
-                }
-            }
 
             let episodes =[];
             if (type === "series") {
@@ -338,7 +245,7 @@
                             if (!episodeMap[seasonNumber]) episodeMap[seasonNumber] = new Set();
                             for (let ep = 1; ep <= maxEp; ep++) episodeMap[seasonNumber].add(ep);
                         }
-                    } catch (e) { }
+                    } catch (e) {}
                 }
 
                 for (const seasonNumber of Object.keys(episodeMap).map(Number).sort((a, b) => a - b)) {
@@ -369,10 +276,8 @@
                 score: data.imdbRatingValue ? parseFloat(data.imdbRatingValue) : null,
                 duration: durationMinutes,
                 description: data.description,
-                cast: actors
             });
 
-            // Attach Episodes to the payload natively
             mItem.episodes = episodes;
             cb({ success: true, data: mItem });
 
@@ -392,13 +297,11 @@
             const episode = parts.length > 2 ? parseInt(parts[2]) : 0;
 
             const subjectUrl = `${baseUrl}/wefeed-mobile-bff/subject-api/get?subjectId=${originalSubjectId}`;
-            const subjectHeaders = generateHeaders("GET", subjectUrl, null);
-
-            // Fetch Token
-            const subjectRes = await fetch(subjectUrl, { headers: subjectHeaders });
+            const subjectRes = await fetch(subjectUrl, { headers: generateHeaders("GET", subjectUrl, null) });
+            
             let token = null;
             const xUser = subjectRes.headers.get("x-user");
-            if (xUser) { try { token = JSON.parse(xUser).token; } catch (e) { } }
+            if (xUser) { try { token = JSON.parse(xUser).token; } catch (e) {} }
 
             const subjectRoot = await subjectRes.json();
             let subjectIds =[];
@@ -431,51 +334,49 @@
                     for (const stream of streams) {
                         if (!stream.url) continue;
 
-                        let qualMatches = stream.resolutions ? stream.resolutions.match(/(2160|1440|1080|720|480|360|240)/) : null;
-                        let streamQuality = qualMatches ? qualMatches[0] : null;
-
+                        let qualMatch = stream.resolutions ? stream.resolutions.match(/(2160|1440|1080|720|480|360|240)/) : null;
                         const sr = new StreamResult({
                             url: stream.url,
-                            quality: streamQuality ? `${streamQuality}p (${subj.lang})` : subj.lang,
+                            quality: qualMatch ? `${qualMatch[0]}p (${subj.lang})` : subj.lang,
                             headers: { "Referer": baseUrl }
                         });
                         if (stream.signCookie) sr.headers["Cookie"] = stream.signCookie;
-                        
-                        let subs =[];
-                        const streamId = stream.id || `${subj.id}|${season}|${episode}`;
-                        
-                        // Extract Native Streaming Captions
-                        try {
-                            const subLink = `${baseUrl}/wefeed-mobile-bff/subject-api/get-stream-captions?subjectId=${subj.id}&streamId=${streamId}`;
-                            const sHeaders = generateHeaders("GET", subLink, null);
-                            sHeaders["Accept"] = ""; sHeaders["Content-Type"] = "";
-                            const subRes = await fetch(subLink, { headers: sHeaders });
-                            const extCaptions = (await subRes.json()).data?.extCaptions ||[];
-                            for (const cap of extCaptions) {
-                                if (cap.url) subs.push({ url: cap.url, label: cap.lanName || cap.language || "Subtitle", lang: cap.lan || "Unknown" });
-                            }
-                        } catch (e) { }
-
-                        // Extract External Captions
-                        try {
-                            const extLink = `${baseUrl}/wefeed-mobile-bff/subject-api/get-ext-captions?subjectId=${subj.id}&resourceId=${streamId}&episode=0`;
-                            const extHeaders = generateHeaders("GET", extLink, null);
-                            extHeaders["Accept"] = ""; extHeaders["Content-Type"] = "";
-                            const extRes = await fetch(extLink, { headers: extHeaders });
-                            const extCaptions = (await extRes.json()).data?.extCaptions ||[];
-                            for (const cap of extCaptions) {
-                                if (cap.url) subs.push({ url: cap.url, label: cap.lanName || cap.language || "Subtitle", lang: cap.lan || "Unknown" });
-                            }
-                        } catch (e) { }
-
-                        if (subs.length > 0) sr.subtitles = subs;
                         results.push(sr);
                     }
 
-                    // Fallback mismatch detector
+                    // Fallback for missing streams
                     if (streams.length === 0) {
                         const fallbackUrl = `${baseUrl}/wefeed-mobile-bff/subject-api/get?subjectId=${subj.id}`;
-                        const fHeaders = generateHeaders("GET", fallbackUrl, null);
-                        const fRoot = await (await fetch(fallbackUrl, { headers: fHeaders })).json();
+                        const fRes = await fetch(fallbackUrl, { headers: generateHeaders("GET", fallbackUrl, null) });
+                        const fRoot = await fRes.json();
                         for (const det of (fRoot.data?.resourceDetectors ||[])) {
-                            for (const video of (det.resolutionList ||
+                            for (const video of (det.resolutionList ||[])) {
+                                if (video.resourceLink) {
+                                    results.push(new StreamResult({
+                                        url: video.resourceLink,
+                                        quality: video.resolution ? `${video.resolution}p (${subj.lang})` : subj.lang,
+                                        headers: { "Referer": baseUrl }
+                                    }));
+                                }
+                            }
+                        }
+                    }
+
+                } catch (e) {
+                    continue;
+                }
+            }
+            
+            cb({ success: true, data: results });
+        } catch (e) {
+            cb({ success: false, error: e.toString() });
+        }
+    }
+
+    // --- IMPORTANT: Export to SkyStream Global Scope ---
+    globalThis.getHome = getHome;
+    globalThis.search = search;
+    globalThis.load = load;
+    globalThis.loadStreams = loadStreams;
+
+})();
