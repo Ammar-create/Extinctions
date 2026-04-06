@@ -1,10 +1,10 @@
-{
-  "packageName": "com.moviebox.provider",
-  "name": "MovieBox",
+	{
+  "packageName": "dev.ammar.goojara",
+  "name": "Goojara",
   "version": 1,
-  "baseUrl": "https://api3.aoneroom.com",
-  "description": "Movies, Series, Anime — Bollywood, Hollywood, Korean, South Indian and more",
-  "authors": ["Converted from phisher98"],
-  "languages": ["hi", "en", "ta", "te", "ko", "zh", "ja"],
-  "categories": ["movies", "tvseries", "anime"]
+  "baseUrl": "https://ww1.goojara.to",
+  "description": "Movies and Series from Goojara",
+  "authors": ["Ammar"],
+  "languages": ["en"],
+  "categories": ["movies", "tvseries"]
 }
