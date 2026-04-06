@@ -1,27 +1,20 @@
 [
   {
-    "packageName": "com.moviebox.provider",
-    "name": "MovieBox",
+    "packageName": "dev.ammar.goojara",
+    "name": "Goojara",
     "version": 1,
-    "baseUrl": "https://api3.aoneroom.com",
-    "description": "Movies, Series, Anime — Bollywood, Hollywood, Korean, South Indian and more",
+    "baseUrl": "https://ww1.goojara.to",
+    "description": "Movies and Series from Goojara",
     "authors": [
-      "Converted from phisher98"
+      "Ammar"
     ],
     "languages": [
-      "hi",
-      "en",
-      "ta",
-      "te",
-      "ko",
-      "zh",
-      "ja"
+      "en"
     ],
     "categories": [
       "movies",
-      "tvseries",
-      "anime"
+      "tvseries"
     ],
-    "url": "https://raw.githubusercontent.com/Ammar-create/Extinctions/main/dist/com.moviebox.provider.sky"
+    "url": "https://raw.githubusercontent.com/Ammar-create/Extinctions/main/dist/dev.ammar.goojara.sky"
   }
 ]
